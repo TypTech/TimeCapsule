@@ -7,6 +7,7 @@ import 'package:time_capsule/screens/create_capsule_page.dart';
 import 'package:time_capsule/screens/photo_selection_screen.dart';
 import 'package:time_capsule/screens/theme_selection_page.dart';
 import 'package:time_capsule/screens/capsule_detail_page.dart';
+import 'package:time_capsule/screens/for_you_page.dart';
 import 'dart:io';
 import 'package:intl/intl.dart';
 
@@ -162,6 +163,10 @@ class _HomeScreenState extends State<HomeScreen>
               label: 'My Capsules',
             ),
             BottomNavigationBarItem(
+              icon: Icon(Icons.play_circle_fill_rounded),
+              label: 'For You',
+            ),
+            BottomNavigationBarItem(
               icon: Icon(Icons.settings_rounded),
               label: 'Settings',
             ),
@@ -188,6 +193,8 @@ class _HomeScreenState extends State<HomeScreen>
       case 1:
         return _buildCapsuleTab();
       case 2:
+        return const ForYouPage();
+      case 3:
         return _buildSettingsTab();
       default:
         return _buildHomeTab();

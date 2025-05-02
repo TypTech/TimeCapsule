@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:time_capsule/services/theme_service.dart';
 import 'package:time_capsule/services/media_service.dart';
+import 'package:time_capsule/services/video_service.dart';
 import 'package:time_capsule/services/local_storage_service.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
@@ -11,6 +12,7 @@ import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:time_capsule/models/capsule.dart';
+import 'package:time_capsule/models/liked_video.dart';
 import 'services/notification_service.dart';
 import 'services/image_processing_service.dart';
 import 'services/user_preferences_service.dart';
@@ -19,6 +21,7 @@ import 'screens/photo_selection_screen.dart';
 import 'screens/create_capsule_page.dart';
 import 'screens/theme_selection_page.dart';
 import 'screens/capsule_detail_page.dart';
+import 'screens/for_you_page.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'screens/home_screen.dart';
@@ -39,11 +42,15 @@ void main() async {
   if (!Hive.isAdapterRegistered(0)) {
     Hive.registerAdapter(CapsuleAdapter());
   }
+  if (!Hive.isAdapterRegistered(2)) {
+    Hive.registerAdapter(LikedVideoAdapter());
+  }
 
   // Initialize services after Hive setup
   final mediaService = MediaService();
   final localStorageService = LocalStorageService();
   final themeService = ThemeService();
+  final videoService = VideoService();
 
   // Wait for initialization
   try {
@@ -64,6 +71,7 @@ void main() async {
         ChangeNotifierProvider<LocalStorageService>(
           create: (_) => localStorageService,
         ),
+        ChangeNotifierProvider<VideoService>(create: (_) => videoService),
       ],
       child: const MyApp(),
     ),

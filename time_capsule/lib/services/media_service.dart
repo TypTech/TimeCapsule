@@ -10,7 +10,8 @@ import 'package:uuid/uuid.dart';
 import 'image_processing_service.dart';
 import 'package:time_capsule/models/capsule.dart';
 import 'package:time_capsule/services/local_storage_service.dart';
-import 'package:flutter_easyloading/flutter_easyloading.dart';
+// Remove flutter_easyloading import
+// import 'package:flutter_easyloading/flutter_easyloading.dart';
 // Temporarily commented out due to dependency issues
 // import 'package:ffmpeg_kit_flutter/ffmpeg_kit.dart';
 // import 'package:ffmpeg_kit_flutter/return_code.dart';
@@ -137,10 +138,7 @@ class MediaService extends ChangeNotifier {
       // If we still have no photos, prompt the user to select some
       if (_oldPhotos.isEmpty) {
         debugPrint('No old photos found, prompting user to select photos');
-        // Show a message to the user
-        EasyLoading.showInfo(
-          'Please select some photos to display on your home screen',
-        );
+        // Don't use EasyLoading as it's causing initialization issues
 
         // Let the user pick some photos
         final List<XFile> pickedPhotos = await _picker.pickMultiImage();
@@ -439,7 +437,6 @@ class MediaService extends ChangeNotifier {
 
     try {
       _setLoading(true);
-      EasyLoading.show(status: 'Creating capsule...');
 
       // Debug logs
       debugPrint('=== SAVING CAPSULE ===');
@@ -484,20 +481,16 @@ class MediaService extends ChangeNotifier {
         clearPhotos();
         debugPrint('Selected photos cleared');
 
-        // Show success message
-        EasyLoading.showSuccess('Capsule created successfully!');
         notifyListeners(); // Notify listeners that data has changed
         return true;
       } else {
         debugPrint('❌ Failed to create capsule');
         _errorMessage = 'Failed to create capsule';
-        EasyLoading.showError('Failed to create capsule');
         return false;
       }
     } catch (e) {
       debugPrint('❌ Error creating capsule: $e');
       _errorMessage = 'Error creating capsule: $e';
-      EasyLoading.showError('Error: $e');
       return false;
     } finally {
       _setLoading(false);
@@ -508,20 +501,12 @@ class MediaService extends ChangeNotifier {
   Future<bool> deleteCapsule(String capsuleId) async {
     try {
       _setLoading(true);
-      EasyLoading.show(status: 'Deleting capsule...');
 
       final success = await _storageService.deleteCapsule(capsuleId);
-
-      if (success) {
-        EasyLoading.showSuccess('Capsule deleted');
-      } else {
-        EasyLoading.showError('Failed to delete capsule');
-      }
 
       return success;
     } catch (e) {
       _errorMessage = 'Error deleting capsule: $e';
-      EasyLoading.showError('Error: $e');
       return false;
     } finally {
       _setLoading(false);
