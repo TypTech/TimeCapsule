@@ -258,52 +258,69 @@ class LocalStorageService extends ChangeNotifier {
       _setLoading(true);
       _clearError();
 
+      debugPrint('=== CREATE CAPSULE ===');
+      debugPrint('Title: $title');
+      debugPrint('Theme: $theme');
+      debugPrint(
+        'Description: ${description.isNotEmpty ? description : "(empty)"}',
+      );
+      debugPrint('Photos count: ${photos.length}');
+
+      // Ensure Hive is initialized
       await _ensureBoxOpen();
-      debugPrint('Hive boxes ensured open for saving capsule');
+      debugPrint(
+        'Hive boxes open status: Box: ${_box?.isOpen}, CapsulesBox: ${_capsulesBox?.isOpen}',
+      );
+
+      if (_box == null || _capsulesBox == null) {
+        debugPrint('❌ Error: Hive boxes are null');
+        _setError('Storage initialization failed');
+        return false;
+      }
 
       // Create a unique ID for the capsule
       final uuid = const Uuid().v4();
-      debugPrint('Generated UUID for new capsule: $uuid');
+      debugPrint('Generated UUID: $uuid');
 
       // Get the app's public directory for storing photos
       Directory? baseDir;
       if (Platform.isAndroid) {
-        // Für Android: Speichere in einem öffentlichen Verzeichnis
+        // For Android: Store in a public directory
         baseDir = await getExternalStorageDirectory();
 
-        // Falls das fehlschlägt, versuche eine Alternative
+        // Fall back to app documents directory if needed
         if (baseDir == null) {
           baseDir = await getApplicationDocumentsDirectory();
           debugPrint(
-            'Verwende Anwendungsverzeichnis als Fallback: ${baseDir.path}',
+            'Using app documents directory as fallback: ${baseDir.path}',
           );
         } else {
-          debugPrint('Verwende externes Speicherverzeichnis: ${baseDir.path}');
+          debugPrint('Using external storage directory: ${baseDir.path}');
         }
       } else {
-        // Für iOS und andere: Verwende das Dokumente-Verzeichnis
+        // For iOS and others: Use the documents directory
         baseDir = await getApplicationDocumentsDirectory();
-        debugPrint('Verwende Anwendungsverzeichnis: ${baseDir.path}');
+        debugPrint('Using app documents directory: ${baseDir.path}');
       }
 
-      // Erstelle ein Verzeichnis für alle TimeCapsules
+      // Create a directory for all TimeCapsules
       final timecapsuleBaseDir = Directory('${baseDir.path}/TimeCapsule');
       if (!await timecapsuleBaseDir.exists()) {
         await timecapsuleBaseDir.create(recursive: true);
         debugPrint(
-          'TimeCapsule-Basisverzeichnis erstellt: ${timecapsuleBaseDir.path}',
+          'TimeCapsule base directory created: ${timecapsuleBaseDir.path}',
         );
       } else {
         debugPrint(
-          'TimeCapsule-Basisverzeichnis existiert bereits: ${timecapsuleBaseDir.path}',
+          'TimeCapsule base directory already exists: ${timecapsuleBaseDir.path}',
         );
       }
 
-      // Erstelle ein Verzeichnis für diese spezifische Capsule
+      // Create a directory for this specific capsule
       final capsuleDir = Directory('${timecapsuleBaseDir.path}/$uuid');
       if (!await capsuleDir.exists()) {
         await capsuleDir.create(recursive: true);
-        debugPrint('Capsule-Verzeichnis erstellt: ${capsuleDir.path}');
+        debugPrint('Capsule directory created: ${capsuleDir.path}');
       }
 
       // Process photos according to user settings
@@ -327,17 +344,31 @@ class LocalStorageService extends ChangeNotifier {
         final String fileName = '${i}_${path.basename(photo.path)}';
         final String filePath = '${capsuleDir.path}/$fileName';
 
-        // Copy the file to the capsule directory
-        final File newFile = await photo.copy(filePath);
-        if (await newFile.exists()) {
-          photoFilePaths.add(filePath);
-          debugPrint('Saved photo to: $filePath');
-        } else {
-          debugPrint('Failed to save photo to: $filePath');
+        try {
+          // Copy the file to the capsule directory
+          final File newFile = await photo.copy(filePath);
+          if (await newFile.exists()) {
+            photoFilePaths.add(filePath);
+            debugPrint(
+              '✅ Saved photo to: $filePath (${await newFile.length()} bytes)',
+            );
+          } else {
+            debugPrint(
+              '❌ Failed to save photo to: $filePath - file does not exist after copy',
+            );
+          }
+        } catch (e) {
+          debugPrint('❌ Error copying photo to $filePath: $e');
         }
       }
 
-      // Erstelle eine JSON-Datei mit den Capsule-Metadaten im Verzeichnis
+      if (photoFilePaths.isEmpty) {
+        debugPrint('❌ No photos were saved');
+        _setError('Failed to save photos');
+        return false;
+      }
+
+      // Create a JSON file with capsule metadata in the directory
       final metadataFile = File('${capsuleDir.path}/metadata.json');
       final metadata = {
         'id': uuid,
@@ -348,7 +379,7 @@ class LocalStorageService extends ChangeNotifier {
         'createdAt': DateTime.now().toIso8601String(),
       };
       await metadataFile.writeAsString(jsonEncode(metadata));
-      debugPrint('Metadata-Datei gespeichert: ${metadataFile.path}');
+      debugPrint('Metadata file saved: ${metadataFile.path}');
 
       // Create the capsule
       final timeCapsule = TimeCapsule(
@@ -383,12 +414,12 @@ class LocalStorageService extends ChangeNotifier {
       try {
         if (_capsulesBox != null) {
           await _capsulesBox!.put(capsule.id, capsule);
-          debugPrint('Added capsule to new box: ${capsule.id}');
+          debugPrint('✅ Added capsule to new box: ${capsule.id}');
         } else {
-          debugPrint('_capsulesBox is null, could not save capsule');
+          debugPrint('❌ _capsulesBox is null, could not save capsule');
         }
       } catch (e) {
-        debugPrint('Error adding capsule to new box: $e');
+        debugPrint('❌ Error adding capsule to new box: $e');
       }
 
       // Reload capsules
@@ -400,10 +431,10 @@ class LocalStorageService extends ChangeNotifier {
         debugPrint('Error reloading capsules: $e');
       }
 
-      debugPrint('Capsule erfolgreich erstellt mit ID: $uuid');
+      debugPrint('✅ Capsule successfully created with ID: $uuid');
       return true;
     } catch (e) {
-      debugPrint('Error creating capsule: $e');
+      debugPrint('❌ Error creating capsule: $e');
       _setError('Failed to create capsule: ${e.toString()}');
       return false;
     } finally {

@@ -85,8 +85,16 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    final themeService = Provider.of<ThemeService>(context);
-    final isDark = themeService.isDarkMode;
+    ThemeService? themeService;
+    bool isDark = false;
+
+    try {
+      themeService = Provider.of<ThemeService>(context, listen: true);
+      isDark = themeService.isDarkMode;
+    } catch (e) {
+      debugPrint('Error accessing ThemeService: $e');
+      // Fallback to default theme
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -96,12 +104,10 @@ class _HomeScreenState extends State<HomeScreen>
           // Theme toggle button
           IconButton(
             icon: Icon(
-              themeService.isDarkMode
-                  ? Icons.light_mode_rounded
-                  : Icons.dark_mode_rounded,
+              isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
               size: 22,
             ),
-            onPressed: () => themeService.toggleTheme(),
+            onPressed: () => themeService?.toggleTheme(),
           ),
         ],
       ),
@@ -115,9 +121,10 @@ class _HomeScreenState extends State<HomeScreen>
         },
         icon: const Icon(Icons.add_rounded),
         label: const Text('New Capsule'),
-        elevation: 2,
+        elevation: 4,
+        heroTag: 'newCapsule',
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [
@@ -645,16 +652,37 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildCapsuleTab() {
     final theme = Theme.of(context);
 
-    // Get capsules directly from LocalStorageService to ensure fresh data
+    // Lade Capsules direkt vom StorageService
     final capsules = _storageService.capsules;
     debugPrint('Building capsule tab with ${capsules.length} capsules');
 
-    return RefreshIndicator(
-      onRefresh: () => _refreshData(forceReload: true),
-      child:
-          capsules.isEmpty
-              ? _buildEmptyCapsuleTab(theme)
-              : _buildCapsuleList(theme, capsules),
+    return Stack(
+      children: [
+        RefreshIndicator(
+          onRefresh: () => _refreshData(forceReload: true),
+          child:
+              capsules.isEmpty
+                  ? _buildEmptyCapsuleTab(theme)
+                  : _buildCapsuleList(theme, capsules),
+        ),
+
+        // Manueller Refresh-Button in der oberen rechten Ecke
+        Positioned(
+          top: 20,
+          right: 20,
+          child: FloatingActionButton(
+            mini: true,
+            backgroundColor: theme.colorScheme.primary.withOpacity(0.8),
+            child: const Icon(Icons.refresh),
+            onPressed: () async {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Refreshing capsules...')),
+              );
+              await _refreshData(forceReload: true);
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -867,6 +895,16 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildSettingsTab() {
     final theme = Theme.of(context);
+    ThemeService? themeService;
+    bool isDark = false;
+
+    try {
+      themeService = Provider.of<ThemeService>(context, listen: false);
+      isDark = themeService.isDarkMode;
+    } catch (e) {
+      debugPrint('Error accessing ThemeService in settings tab: $e');
+      // Fallback to default theme
+    }
 
     // Settings tab
     return SingleChildScrollView(
@@ -905,23 +943,14 @@ class _HomeScreenState extends State<HomeScreen>
               _settingsCard(
                 icon: Icons.dark_mode_rounded,
                 title: 'Dark Mode',
-                subtitle:
-                    Provider.of<ThemeService>(context).isDarkMode
-                        ? 'On'
-                        : 'Off',
+                subtitle: isDark ? 'On' : 'Off',
                 onTap: () {
-                  Provider.of<ThemeService>(
-                    context,
-                    listen: false,
-                  ).toggleTheme();
+                  themeService?.toggleTheme();
                 },
                 trailing: Switch(
-                  value: Provider.of<ThemeService>(context).isDarkMode,
+                  value: isDark,
                   onChanged: (value) {
-                    Provider.of<ThemeService>(
-                      context,
-                      listen: false,
-                    ).toggleTheme();
+                    themeService?.toggleTheme();
                   },
                 ),
               ),

@@ -308,9 +308,12 @@ class MediaService extends ChangeNotifier {
       _setLoading(true);
       EasyLoading.show(status: 'Creating capsule...');
 
-      debugPrint(
-        'Starting to save capsule with ${_selectedPhotos.length} photos: Title="$title", Theme="$theme"',
-      );
+      // Debug logs
+      debugPrint('=== SAVING CAPSULE ===');
+      debugPrint('Title: $title');
+      debugPrint('Description: $description');
+      debugPrint('Theme: $theme');
+      debugPrint('Photos count: ${_selectedPhotos.length}');
 
       // Ensure storage service is initialized
       try {
@@ -323,7 +326,7 @@ class MediaService extends ChangeNotifier {
 
       // Make a copy of the selected photos to avoid concurrent modification issues
       final List<File> photosToSave = List<File>.from(_selectedPhotos);
-      debugPrint('Saving ${photosToSave.length} photos to disk');
+      debugPrint('Prepared photos for saving: ${photosToSave.length}');
 
       // Create the capsule using the storage service
       final success = await _storageService.createCapsule(
@@ -334,7 +337,7 @@ class MediaService extends ChangeNotifier {
       );
 
       if (success) {
-        debugPrint('Capsule created successfully');
+        debugPrint('✅ Capsule created successfully');
 
         // Explicitly reload the capsules list after creating a new one
         debugPrint('Reloading capsules list...');
@@ -342,23 +345,24 @@ class MediaService extends ChangeNotifier {
 
         // Print the number of loaded capsules
         final capsuleCount = _storageService.capsules.length;
-        debugPrint('Loaded $capsuleCount capsules after saving');
+        debugPrint('✅ Loaded $capsuleCount capsules after saving');
 
         // Clear the selected photos
         clearPhotos();
+        debugPrint('Selected photos cleared');
 
         // Show success message
         EasyLoading.showSuccess('Capsule created successfully!');
         notifyListeners(); // Notify listeners that data has changed
         return true;
       } else {
-        debugPrint('Failed to create capsule');
+        debugPrint('❌ Failed to create capsule');
         _errorMessage = 'Failed to create capsule';
         EasyLoading.showError('Failed to create capsule');
         return false;
       }
     } catch (e) {
-      debugPrint('Error creating capsule: $e');
+      debugPrint('❌ Error creating capsule: $e');
       _errorMessage = 'Error creating capsule: $e';
       EasyLoading.showError('Error: $e');
       return false;

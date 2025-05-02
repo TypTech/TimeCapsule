@@ -50,7 +50,7 @@ void main() async {
     await localStorageService.init();
     await mediaService.initialize();
     // Load theme preferences if needed
-    // await themeService.loadPreferences();
+    // Initialisierung passiert bereits automatisch im Konstruktor
   } catch (e) {
     debugPrint('Error initializing services: $e');
   }
