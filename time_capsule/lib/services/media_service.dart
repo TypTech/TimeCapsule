@@ -6,6 +6,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as path;
 import 'package:uuid/uuid.dart';
 import 'image_processing_service.dart';
+import 'package:time_capsule/models/capsule.dart';
+import 'package:time_capsule/services/local_storage_service.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
 // Temporarily commented out due to dependency issues
 // import 'package:ffmpeg_kit_flutter/ffmpeg_kit.dart';
 // import 'package:ffmpeg_kit_flutter/return_code.dart';
@@ -24,18 +27,37 @@ class MediaService extends ChangeNotifier {
   final List<File> _selectedPhotos = [];
   bool _isLoading = false;
   String? _errorMessage;
+  final LocalStorageService _storageService = LocalStorageService();
 
   List<File> get selectedPhotos => _selectedPhotos;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+
+  // Get capsules from the storage service
+  List<TimeCapsule> get capsules => _storageService.capsules;
 
   Future<void> _initialize() async {
     await requestPermission();
   }
 
   Future<bool> requestPermission() async {
-    final permissionStatus = await Permission.photos.request();
-    return permissionStatus.isGranted;
+    try {
+      final photosStatus = await Permission.photos.request();
+      final storageStatus = await Permission.storage.request();
+
+      final granted = photosStatus.isGranted || storageStatus.isGranted;
+
+      if (!granted) {
+        _errorMessage = 'Permission to access photos is required';
+        notifyListeners();
+      }
+
+      return granted;
+    } catch (e) {
+      _errorMessage = 'Error requesting permissions: $e';
+      notifyListeners();
+      return false;
+    }
   }
 
   Future<File?> pickSingleImage() async {
@@ -116,7 +138,8 @@ class MediaService extends ChangeNotifier {
     }
   }
 
-  void clearSelectedPhotos() {
+  // Clear all selected photos
+  void clearPhotos() {
     _selectedPhotos.clear();
     notifyListeners();
   }
@@ -245,5 +268,145 @@ class MediaService extends ChangeNotifier {
   void _clearError() {
     _errorMessage = null;
     notifyListeners();
+  }
+
+  // Initialize storage
+  Future<void> initialize() async {
+    if (_isLoading) return;
+
+    try {
+      _setLoading(true);
+
+      // Initialize storage service first
+      await _storageService.init();
+
+      // Load existing capsules
+      await _storageService.loadCapsules();
+
+      debugPrint('MediaService initialized successfully');
+    } catch (e) {
+      debugPrint('Failed to initialize MediaService: $e');
+      _errorMessage = 'Failed to initialize: $e';
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Save a new capsule with selected photos
+  Future<bool> saveCapsule({
+    required String title,
+    required String description,
+    required String theme,
+  }) async {
+    if (_selectedPhotos.isEmpty) {
+      _errorMessage = 'Please select at least one photo';
+      notifyListeners();
+      return false;
+    }
+
+    try {
+      _setLoading(true);
+      EasyLoading.show(status: 'Creating capsule...');
+
+      debugPrint(
+        'Starting to save capsule with ${_selectedPhotos.length} photos: Title="$title", Theme="$theme"',
+      );
+
+      // Ensure storage service is initialized
+      try {
+        debugPrint('Initializing storage service...');
+        await _storageService.init();
+        debugPrint('Storage service initialized successfully');
+      } catch (e) {
+        debugPrint('Error initializing storage service: $e');
+      }
+
+      // Make a copy of the selected photos to avoid concurrent modification issues
+      final List<File> photosToSave = List<File>.from(_selectedPhotos);
+      debugPrint('Saving ${photosToSave.length} photos to disk');
+
+      // Create the capsule using the storage service
+      final success = await _storageService.createCapsule(
+        title: title,
+        description: description,
+        theme: theme,
+        photos: photosToSave,
+      );
+
+      if (success) {
+        debugPrint('Capsule created successfully');
+
+        // Explicitly reload the capsules list after creating a new one
+        debugPrint('Reloading capsules list...');
+        await _storageService.loadCapsules();
+
+        // Print the number of loaded capsules
+        final capsuleCount = _storageService.capsules.length;
+        debugPrint('Loaded $capsuleCount capsules after saving');
+
+        // Clear the selected photos
+        clearPhotos();
+
+        // Show success message
+        EasyLoading.showSuccess('Capsule created successfully!');
+        notifyListeners(); // Notify listeners that data has changed
+        return true;
+      } else {
+        debugPrint('Failed to create capsule');
+        _errorMessage = 'Failed to create capsule';
+        EasyLoading.showError('Failed to create capsule');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('Error creating capsule: $e');
+      _errorMessage = 'Error creating capsule: $e';
+      EasyLoading.showError('Error: $e');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Delete a capsule
+  Future<bool> deleteCapsule(String capsuleId) async {
+    try {
+      _setLoading(true);
+      EasyLoading.show(status: 'Deleting capsule...');
+
+      final success = await _storageService.deleteCapsule(capsuleId);
+
+      if (success) {
+        EasyLoading.showSuccess('Capsule deleted');
+      } else {
+        EasyLoading.showError('Failed to delete capsule');
+      }
+
+      return success;
+    } catch (e) {
+      _errorMessage = 'Error deleting capsule: $e';
+      EasyLoading.showError('Error: $e');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Refresh capsules list
+  Future<void> refreshCapsules() async {
+    if (_isLoading) return;
+
+    try {
+      _setLoading(true);
+      await _storageService.loadCapsules();
+    } catch (e) {
+      _errorMessage = 'Failed to refresh capsules: $e';
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Get newest capsules
+  List<TimeCapsule> getNewestCapsules([int limit = 5]) {
+    return _storageService.getNewestCapsules(limit);
   }
 }

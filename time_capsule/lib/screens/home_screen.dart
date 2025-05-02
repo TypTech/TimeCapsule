@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:time_capsule/services/media_service.dart';
 import 'package:time_capsule/services/theme_service.dart';
+import 'package:time_capsule/services/local_storage_service.dart';
 import 'package:time_capsule/screens/create_capsule_page.dart';
 import 'package:time_capsule/screens/photo_selection_screen.dart';
 import 'package:time_capsule/screens/theme_selection_page.dart';
+import 'package:time_capsule/screens/capsule_detail_page.dart';
+import 'dart:io';
+import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,12 +22,13 @@ class _HomeScreenState extends State<HomeScreen>
   int _currentIndex = 0;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  final LocalStorageService _storageService = LocalStorageService();
 
   @override
   void initState() {
     super.initState();
-    // Initialize permissions when the app starts
-    _initPermissions();
+    // Initialize permissions and services
+    _initServices();
 
     // Setup animations
     _animationController = AnimationController(
@@ -44,9 +49,38 @@ class _HomeScreenState extends State<HomeScreen>
     super.dispose();
   }
 
-  Future<void> _initPermissions() async {
+  Future<void> _initServices() async {
     final mediaService = Provider.of<MediaService>(context, listen: false);
     await mediaService.requestPermission();
+    await _storageService.init();
+    await _refreshData();
+  }
+
+  Future<void> _refreshData({bool forceReload = false}) async {
+    try {
+      // Ensure storage service is initialized
+      await _storageService.init();
+
+      // Force close and reopen boxes if needed
+      if (forceReload) {
+        debugPrint('Forcing reload of capsules from disk...');
+        await _storageService.reinitialize();
+      }
+
+      // Reload capsules
+      await _storageService.loadCapsules();
+
+      // Log the number of capsules loaded
+      debugPrint(
+        'Refreshed data: ${_storageService.capsules.length} capsules loaded',
+      );
+
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      debugPrint('Error refreshing data: $e');
+    }
   }
 
   @override
@@ -77,7 +111,7 @@ class _HomeScreenState extends State<HomeScreen>
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const CreateCapsulePage()),
-          );
+          ).then((_) => _refreshData());
         },
         icon: const Icon(Icons.add_rounded),
         label: const Text('New Capsule'),
@@ -101,6 +135,11 @@ class _HomeScreenState extends State<HomeScreen>
               _currentIndex = index;
               _animationController.reset();
               _animationController.forward();
+
+              // Reload capsules data when switching to the Capsules tab
+              if (index == 1) {
+                _refreshData();
+              }
             });
           },
           items: const [
@@ -148,6 +187,7 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildHomeTab() {
     final mediaService = Provider.of<MediaService>(context);
     final theme = Theme.of(context);
+    final capsules = _storageService.capsules;
 
     if (mediaService.isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -174,7 +214,7 @@ class _HomeScreenState extends State<HomeScreen>
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () => _initPermissions(),
+              onPressed: () => _initServices(),
               icon: const Icon(Icons.refresh_rounded),
               label: const Text('Retry'),
             ),
@@ -183,159 +223,218 @@ class _HomeScreenState extends State<HomeScreen>
       );
     }
 
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 20),
+    return RefreshIndicator(
+      onRefresh: _refreshData,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 20),
 
-          // Welcome section
-          Text('Create Memories', style: theme.textTheme.titleLarge),
-          const SizedBox(height: 8),
-          Text(
-            'Turn your photos into beautiful video collages with music',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+            // Welcome section
+            Text('Create Memories', style: theme.textTheme.titleLarge),
+            const SizedBox(height: 8),
+            Text(
+              'Turn your photos into beautiful video collages with music',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+              ),
             ),
-          ),
-          const SizedBox(height: 30),
+            const SizedBox(height: 30),
 
-          // Quick actions card
-          Card(
-            margin: EdgeInsets.zero,
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            // Quick actions card
+            Card(
+              margin: EdgeInsets.zero,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.bolt_rounded,
+                          color: theme.colorScheme.primary,
+                          size: 22,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Quick Actions',
+                          style: theme.textTheme.titleMedium,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _actionButton(
+                            context: context,
+                            icon: Icons.photo_library_rounded,
+                            title: 'Select Photos',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) => const PhotoSelectionScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _actionButton(
+                            context: context,
+                            icon: Icons.camera_alt_rounded,
+                            title: 'Take Photo',
+                            onTap: () async {
+                              final mediaService = Provider.of<MediaService>(
+                                context,
+                                listen: false,
+                              );
+                              await mediaService.takePhoto();
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _actionButton(
+                            context: context,
+                            icon: Icons.movie_creation_rounded,
+                            title: 'Create Video',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) => const CreateCapsulePage(),
+                                ),
+                              ).then((_) => _refreshData());
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _actionButton(
+                            context: context,
+                            icon: Icons.style_rounded,
+                            title: 'Themes',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) => const ThemeSelectionPage(),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Recent Capsules section
+            const SizedBox(height: 25),
+
+            if (capsules.isNotEmpty) ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.bolt_rounded,
-                        color: theme.colorScheme.primary,
-                        size: 22,
-                      ),
-                      const SizedBox(width: 8),
-                      Text('Quick Actions', style: theme.textTheme.titleMedium),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _actionButton(
-                          context: context,
-                          icon: Icons.photo_library_rounded,
-                          title: 'Select Photos',
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder:
-                                    (context) => const PhotoSelectionScreen(),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _actionButton(
-                          context: context,
-                          icon: Icons.camera_alt_rounded,
-                          title: 'Take Photo',
-                          onTap: () async {
-                            final mediaService = Provider.of<MediaService>(
-                              context,
-                              listen: false,
-                            );
-                            await mediaService.takePhoto();
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _actionButton(
-                          context: context,
-                          icon: Icons.movie_creation_rounded,
-                          title: 'Create Video',
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const CreateCapsulePage(),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _actionButton(
-                          context: context,
-                          icon: Icons.style_rounded,
-                          title: 'Themes',
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder:
-                                    (context) => const ThemeSelectionPage(),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+                  Text('Recent Capsules', style: theme.textTheme.titleMedium),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _currentIndex = 1; // Switch to capsules tab
+                      });
+                    },
+                    child: Text(
+                      'View All',
+                      style: TextStyle(color: theme.colorScheme.primary),
+                    ),
                   ),
                 ],
               ),
-            ),
-          ),
+              const SizedBox(height: 15),
+              SizedBox(
+                height: 200,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: capsules.length > 5 ? 5 : capsules.length,
+                  itemBuilder: (context, index) {
+                    final capsule = capsules[index];
+                    return _capsuleCard(
+                      context: context,
+                      title: capsule.title,
+                      date: DateFormat('MMM d, yyyy').format(capsule.createdAt),
+                      imagePath:
+                          capsule.photoFilePaths.isNotEmpty
+                              ? capsule.photoFilePaths.first
+                              : null,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) =>
+                                    CapsuleDetailPage(capsuleId: capsule.id),
+                          ),
+                        ).then((_) => _refreshData());
+                      },
+                    );
+                  },
+                ),
+              ),
+            ] else ...[
+              // Featured templates if no capsules
+              Text('Featured Templates', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 15),
+              SizedBox(
+                height: 180,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  children: [
+                    _templateCard(
+                      context: context,
+                      title: 'Anniversary',
+                      assetName: 'assets/images/anniversary.jpg',
+                    ),
+                    _templateCard(
+                      context: context,
+                      title: 'Birthday',
+                      assetName: 'assets/images/birthday.jpg',
+                    ),
+                    _templateCard(
+                      context: context,
+                      title: 'Travel',
+                      assetName: 'assets/images/travel.jpg',
+                    ),
+                    _templateCard(
+                      context: context,
+                      title: 'Memories',
+                      assetName: 'assets/images/memories.jpg',
+                    ),
+                  ],
+                ),
+              ),
+            ],
 
-          const SizedBox(height: 25),
-
-          // Featured section
-          Text('Featured Templates', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 15),
-          SizedBox(
-            height: 180,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              children: [
-                _templateCard(
-                  context: context,
-                  title: 'Anniversary',
-                  assetName: 'assets/images/anniversary.jpg',
-                ),
-                _templateCard(
-                  context: context,
-                  title: 'Birthday',
-                  assetName: 'assets/images/birthday.jpg',
-                ),
-                _templateCard(
-                  context: context,
-                  title: 'Travel',
-                  assetName: 'assets/images/travel.jpg',
-                ),
-                _templateCard(
-                  context: context,
-                  title: 'Memories',
-                  assetName: 'assets/images/memories.jpg',
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 80), // Space for the FAB
-        ],
+            const SizedBox(height: 80), // Space for the FAB
+          ],
+        ),
       ),
     );
   }
@@ -447,58 +546,321 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildCapsuleTab() {
+  Widget _capsuleCard({
+    required BuildContext context,
+    required String title,
+    required String date,
+    required String? imagePath,
+    required VoidCallback onTap,
+  }) {
     final theme = Theme.of(context);
 
-    // This will show user's saved TimeCapsules
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('My Capsules', style: theme.textTheme.titleLarge),
-          const SizedBox(height: 8),
-          Text(
-            'View and edit your saved capsules',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 180,
+        margin: const EdgeInsets.only(right: 15),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-          ),
-          const SizedBox(height: 50),
-          Expanded(
-            child: Center(
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
+              child:
+                  imagePath != null
+                      ? Image.file(
+                        File(imagePath),
+                        height: 130,
+                        width: 180,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return _placeholderImage(theme);
+                        },
+                      )
+                      : _placeholderImage(theme),
+            ),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.cardTheme.color,
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(16),
+                  bottomRight: Radius.circular(16),
+                ),
+              ),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.video_library_rounded,
-                    size: 70,
-                    color: theme.colorScheme.primary.withOpacity(0.5),
-                  ),
-                  const SizedBox(height: 16),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 40),
-                    child: Text(
-                      'Your TimeCapsules will appear here',
-                      style: theme.textTheme.bodyLarge,
-                      textAlign: TextAlign.center,
+                  Text(
+                    title,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 24),
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        _currentIndex = 0;
-                      });
-                    },
-                    icon: const Icon(Icons.add_rounded),
-                    label: const Text('Create a Capsule'),
+                  const SizedBox(height: 4),
+                  Text(
+                    date,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.textTheme.bodySmall?.color?.withOpacity(0.7),
+                    ),
                   ),
                 ],
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _placeholderImage(ThemeData theme) {
+    return Container(
+      height: 130,
+      width: 180,
+      color: theme.colorScheme.primary.withOpacity(0.1),
+      child: Center(
+        child: Icon(
+          Icons.photo_library_rounded,
+          color: theme.colorScheme.primary.withOpacity(0.5),
+          size: 40,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCapsuleTab() {
+    final theme = Theme.of(context);
+
+    // Get capsules directly from LocalStorageService to ensure fresh data
+    final capsules = _storageService.capsules;
+    debugPrint('Building capsule tab with ${capsules.length} capsules');
+
+    return RefreshIndicator(
+      onRefresh: () => _refreshData(forceReload: true),
+      child:
+          capsules.isEmpty
+              ? _buildEmptyCapsuleTab(theme)
+              : _buildCapsuleList(theme, capsules),
+    );
+  }
+
+  Widget _buildEmptyCapsuleTab(ThemeData theme) {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(20),
+      children: [
+        const SizedBox(height: 30),
+        Text('My Capsules', style: theme.textTheme.titleLarge),
+        const SizedBox(height: 8),
+        Text(
+          'View and edit your saved capsules',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
           ),
-        ],
+        ),
+        const SizedBox(height: 80),
+        Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.video_library_rounded,
+                size: 70,
+                color: theme.colorScheme.primary.withOpacity(0.5),
+              ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40),
+                child: Text(
+                  'Your TimeCapsules will appear here',
+                  style: theme.textTheme.bodyLarge,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 24),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const CreateCapsulePage(),
+                    ),
+                  ).then((_) => _refreshData());
+                },
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Create a Capsule'),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCapsuleList(ThemeData theme, List<TimeCapsule> capsules) {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(20),
+      children: [
+        Text('My Capsules', style: theme.textTheme.titleLarge),
+        const SizedBox(height: 8),
+        Text(
+          'View and edit your saved capsules',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+          ),
+        ),
+        const SizedBox(height: 24),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: capsules.length,
+          itemBuilder: (context, index) {
+            final capsule = capsules[index];
+            return _buildCapsuleListItem(theme, capsule);
+          },
+        ),
+        const SizedBox(height: 80), // Space for FAB
+      ],
+    );
+  }
+
+  Widget _buildCapsuleListItem(ThemeData theme, TimeCapsule capsule) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CapsuleDetailPage(capsuleId: capsule.id),
+            ),
+          ).then((_) => _refreshData());
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Row(
+            children: [
+              // Thumbnail
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child:
+                    capsule.photoFilePaths.isNotEmpty
+                        ? Image.file(
+                          File(capsule.photoFilePaths.first),
+                          width: 80,
+                          height: 80,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              width: 80,
+                              height: 80,
+                              color: theme.colorScheme.primary.withOpacity(0.1),
+                              child: Icon(
+                                Icons.image_rounded,
+                                color: theme.colorScheme.primary.withOpacity(
+                                  0.6,
+                                ),
+                              ),
+                            );
+                          },
+                        )
+                        : Container(
+                          width: 80,
+                          height: 80,
+                          color: theme.colorScheme.primary.withOpacity(0.1),
+                          child: Icon(
+                            Icons.image_rounded,
+                            color: theme.colorScheme.primary.withOpacity(0.6),
+                          ),
+                        ),
+              ),
+
+              const SizedBox(width: 16),
+
+              // Content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      capsule.title,
+                      style: theme.textTheme.titleMedium,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (capsule.description.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        capsule.description,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.textTheme.bodySmall?.color?.withOpacity(
+                            0.7,
+                          ),
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.photo_library_rounded,
+                          size: 14,
+                          color: theme.colorScheme.primary.withOpacity(0.7),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${capsule.photoFilePaths.length} photos',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.textTheme.bodySmall?.color
+                                ?.withOpacity(0.7),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Icon(
+                          Icons.calendar_today_rounded,
+                          size: 14,
+                          color: theme.colorScheme.primary.withOpacity(0.7),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          DateFormat('MMM d, yyyy').format(capsule.createdAt),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.textTheme.bodySmall?.color
+                                ?.withOpacity(0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Arrow
+              Icon(
+                Icons.chevron_right_rounded,
+                color: theme.colorScheme.onSurface.withOpacity(0.4),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

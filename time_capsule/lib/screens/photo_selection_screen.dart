@@ -94,34 +94,13 @@ class PhotoSelectionScreen extends StatelessWidget {
               TextButton.icon(
                 icon: const Icon(Icons.delete),
                 label: const Text('Clear All'),
-                onPressed: () {
-                  final mediaService = context.read<MediaService>();
-                  if (mediaService.selectedPhotos.isNotEmpty) {
-                    showDialog(
-                      context: context,
-                      builder:
-                          (context) => AlertDialog(
-                            title: const Text('Clear selected photos?'),
-                            content: const Text(
-                              'This will remove all photos from the current selection.',
-                            ),
-                            actions: [
-                              TextButton(
-                                child: const Text('Cancel'),
-                                onPressed: () => Navigator.pop(context),
-                              ),
-                              TextButton(
-                                child: const Text('Clear'),
-                                onPressed: () {
-                                  mediaService.clearSelectedPhotos();
-                                  Navigator.pop(context);
-                                },
-                              ),
-                            ],
-                          ),
-                    );
-                  }
-                },
+                onPressed:
+                    () =>
+                        Provider.of<MediaService>(
+                          context,
+                          listen: false,
+                        ).clearPhotos(),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
               ),
             ],
           ),
