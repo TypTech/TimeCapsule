@@ -260,6 +260,12 @@
       "languageVersion": "2.12"
     },
     {
+      "name": "photo_manager",
+      "rootUri": "file:///C:/Users/Tom/AppData/Local/Pub/Cache/hosted/pub.dev/photo_manager-3.6.4",
+      "packageUri": "lib/",
+      "languageVersion": "2.13"
+    },
+    {
       "name": "plugin_platform_interface",
       "rootUri": "file:///C:/Users/Tom/AppData/Local/Pub/Cache/hosted/pub.dev/plugin_platform_interface-2.1.8",
       "packageUri": "lib/",
@@ -344,7 +350,7 @@
       "languageVersion": "3.7"
     }
   ],
-  "generated": "2025-05-02T20:08:34.975729Z",
+  "generated": "2025-05-02T22:55:47.862296Z",
   "generator": "pub",
   "generatorVersion": "3.7.2",
   "flutterRoot": "file:///F:/src/flutter",

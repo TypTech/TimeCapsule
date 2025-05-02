@@ -2,20 +2,69 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/media_service.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
 
-class PhotoSelectionScreen extends StatelessWidget {
+class PhotoSelectionScreen extends StatefulWidget {
   const PhotoSelectionScreen({super.key});
 
   @override
+  State<PhotoSelectionScreen> createState() => _PhotoSelectionScreenState();
+}
+
+class _PhotoSelectionScreenState extends State<PhotoSelectionScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _checkCreationMode();
+  }
+
+  // Prüfe, ob der Kapsel-Erstellungsmodus aktiv ist
+  void _checkCreationMode() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final mediaService = Provider.of<MediaService>(context, listen: false);
+      if (!mediaService.isCapsuleCreationMode) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Fotos können nur beim Erstellen einer Kapsel hinzugefügt werden.',
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        Navigator.pop(context); // Zurück zur vorherigen Seite
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Select Photos'),
+        elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.check),
-            onPressed: () {
-              Navigator.pop(context);
+          Consumer<MediaService>(
+            builder: (context, mediaService, child) {
+              final selectedCount = mediaService.selectedPhotos.length;
+              if (selectedCount > 0) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: Text(
+                      '$selectedCount selected',
+                      style: TextStyle(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
             },
           ),
         ],

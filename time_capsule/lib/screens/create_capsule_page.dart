@@ -30,7 +30,19 @@ class _CreateCapsulePageState extends State<CreateCapsulePage> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    // Aktiviere den Kapsel-Erstellungsmodus, sobald diese Seite geöffnet wird
+    final mediaService = Provider.of<MediaService>(context, listen: false);
+    mediaService.startCapsuleCreation();
+  }
+
+  @override
   void dispose() {
+    // Deaktiviere den Kapsel-Erstellungsmodus, wenn diese Seite geschlossen wird
+    final mediaService = Provider.of<MediaService>(context, listen: false);
+    mediaService.endCapsuleCreation();
+
     _titleController.dispose();
     _descriptionController.dispose();
     super.dispose();
@@ -266,28 +278,50 @@ class _CreateCapsulePageState extends State<CreateCapsulePage> {
                                     ),
                                   ],
                                 ),
-                                ElevatedButton.icon(
-                                  icon: const Icon(
-                                    Icons.add_photo_alternate_rounded,
-                                    size: 18,
-                                  ),
-                                  label: const Text('Add'),
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder:
-                                            (context) =>
-                                                const PhotoSelectionScreen(),
-                                      ),
+                                Consumer<MediaService>(
+                                  builder: (context, mediaService, child) {
+                                    return Row(
+                                      children: [
+                                        // Kamera-Button
+                                        IconButton(
+                                          icon: Icon(
+                                            Icons.camera_alt_rounded,
+                                            color: theme.colorScheme.primary,
+                                          ),
+                                          tooltip: 'Take a photo',
+                                          onPressed: () async {
+                                            await mediaService.takePhoto();
+                                            setState(() {});
+                                          },
+                                        ),
+                                        const SizedBox(width: 8),
+                                        // Gallery-Button
+                                        ElevatedButton.icon(
+                                          icon: const Icon(
+                                            Icons.add_photo_alternate_rounded,
+                                            size: 18,
+                                          ),
+                                          label: const Text('Add Photos'),
+                                          onPressed: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder:
+                                                    (context) =>
+                                                        const PhotoSelectionScreen(),
+                                              ),
+                                            ).then((_) => setState(() {}));
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 16,
+                                              vertical: 8,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     );
                                   },
-                                  style: ElevatedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 8,
-                                    ),
-                                  ),
                                 ),
                               ],
                             ),
@@ -405,6 +439,7 @@ class _CreateCapsulePageState extends State<CreateCapsulePage> {
                                                         context,
                                                         listen: false,
                                                       ).removePhoto(index);
+                                                      setState(() {});
                                                     },
                                                     child: Container(
                                                       padding:

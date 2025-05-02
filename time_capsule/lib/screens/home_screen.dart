@@ -54,6 +54,9 @@ class _HomeScreenState extends State<HomeScreen>
     await mediaService.requestPermission();
     await _storageService.init();
     await _refreshData();
+
+    // Load old photos for the home screen
+    await mediaService.loadOldPhotos();
   }
 
   Future<void> _refreshData({bool forceReload = false}) async {
@@ -279,44 +282,8 @@ class _HomeScreenState extends State<HomeScreen>
                         Expanded(
                           child: _actionButton(
                             context: context,
-                            icon: Icons.photo_library_rounded,
-                            title: 'Select Photos',
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (context) => const PhotoSelectionScreen(),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _actionButton(
-                            context: context,
-                            icon: Icons.camera_alt_rounded,
-                            title: 'Take Photo',
-                            onTap: () async {
-                              final mediaService = Provider.of<MediaService>(
-                                context,
-                                listen: false,
-                              );
-                              await mediaService.takePhoto();
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _actionButton(
-                            context: context,
-                            icon: Icons.movie_creation_rounded,
-                            title: 'Create Video',
+                            icon: Icons.add_circle_outline_rounded,
+                            title: 'Create Capsule',
                             onTap: () {
                               Navigator.push(
                                 context,
@@ -329,6 +296,23 @@ class _HomeScreenState extends State<HomeScreen>
                           ),
                         ),
                         const SizedBox(width: 10),
+                        Expanded(
+                          child: _actionButton(
+                            context: context,
+                            icon: Icons.collections_rounded,
+                            title: 'View Capsules',
+                            onTap: () {
+                              setState(() {
+                                _currentIndex = 1; // Switch to capsules tab
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
                         Expanded(
                           child: _actionButton(
                             context: context,
@@ -345,6 +329,19 @@ class _HomeScreenState extends State<HomeScreen>
                             },
                           ),
                         ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _actionButton(
+                            context: context,
+                            icon: Icons.settings_rounded,
+                            title: 'Settings',
+                            onTap: () {
+                              setState(() {
+                                _currentIndex = 2; // Switch to settings tab
+                              });
+                            },
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -353,6 +350,127 @@ class _HomeScreenState extends State<HomeScreen>
             ),
 
             // Recent Capsules section
+            const SizedBox(height: 25),
+
+            // Old photos / Beautiful moments section
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Old Memories', style: theme.textTheme.titleMedium),
+                TextButton(
+                  onPressed: () async {
+                    // Reload old photos
+                    await mediaService.loadOldPhotos();
+                    setState(() {});
+                  },
+                  child: Text(
+                    'Refresh',
+                    style: TextStyle(color: theme.colorScheme.primary),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 15),
+
+            // Display the old photos
+            if (mediaService.oldPhotos.isNotEmpty)
+              SizedBox(
+                height: 190, // Increased height to accommodate date label
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: mediaService.oldPhotos.length,
+                  itemBuilder: (context, index) {
+                    final photo = mediaService.oldPhotos[index];
+                    return Container(
+                      width: 140,
+                      margin: const EdgeInsets.only(right: 15),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.file(
+                                photo,
+                                height: 160,
+                                width: 140,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    height: 160,
+                                    width: 140,
+                                    color: theme.colorScheme.primary
+                                        .withOpacity(0.1),
+                                    child: Icon(
+                                      Icons.image_not_supported_rounded,
+                                      color: theme.colorScheme.primary,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          if (mediaService.oldestPhotoDate != null)
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                top: 6.0,
+                                left: 4.0,
+                              ),
+                              child: Text(
+                                mediaService.oldestPhotoDate!.year.toString(),
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              )
+            else
+              Container(
+                height: 160,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.photo_album_outlined,
+                      size: 40,
+                      color: theme.colorScheme.primary.withOpacity(0.7),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'No old photos found',
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'We\'ll show your oldest memories here',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.textTheme.bodySmall?.color?.withOpacity(
+                          0.7,
+                        ),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton(
+                      onPressed: () => mediaService.loadOldPhotos(),
+                      child: const Text('Select Photos'),
+                    ),
+                  ],
+                ),
+              ),
+
             const SizedBox(height: 25),
 
             if (capsules.isNotEmpty) ...[

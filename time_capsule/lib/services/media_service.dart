@@ -1,10 +1,12 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as path;
 import 'package:uuid/uuid.dart';
+// Removing photo_manager import
 import 'image_processing_service.dart';
 import 'package:time_capsule/models/capsule.dart';
 import 'package:time_capsule/services/local_storage_service.dart';
@@ -28,16 +30,41 @@ class MediaService extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   final LocalStorageService _storageService = LocalStorageService();
+  bool _isCapsuleCreationMode = false;
+
+  // Old photos for home screen display (simplified implementation)
+  List<File> _oldPhotos = [];
+  DateTime? _oldestPhotoDate;
 
   List<File> get selectedPhotos => _selectedPhotos;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  bool get isCapsuleCreationMode => _isCapsuleCreationMode;
+  List<File> get oldPhotos => _oldPhotos;
+  DateTime? get oldestPhotoDate => _oldestPhotoDate;
 
   // Get capsules from the storage service
   List<TimeCapsule> get capsules => _storageService.capsules;
 
+  // Aktivieren des Kapsel-Erstellungsmodus
+  void startCapsuleCreation() {
+    _isCapsuleCreationMode = true;
+    _selectedPhotos.clear();
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  // Deaktivieren des Kapsel-Erstellungsmodus
+  void endCapsuleCreation() {
+    _isCapsuleCreationMode = false;
+    _selectedPhotos.clear();
+    _errorMessage = null;
+    notifyListeners();
+  }
+
   Future<void> _initialize() async {
     await requestPermission();
+    await loadOldPhotos();
   }
 
   Future<bool> requestPermission() async {
@@ -57,6 +84,100 @@ class MediaService extends ChangeNotifier {
       _errorMessage = 'Error requesting permissions: $e';
       notifyListeners();
       return false;
+    }
+  }
+
+  // Modified method to load old photos for home screen display
+  Future<void> loadOldPhotos() async {
+    try {
+      _setLoading(true);
+      _oldPhotos = [];
+
+      // Check if we have permission
+      if (!(await Permission.photos.isGranted)) {
+        debugPrint('No permission to access photos');
+        return;
+      }
+
+      // First, try to use photos from existing capsules
+      if (_storageService.capsules.isNotEmpty) {
+        debugPrint('Using photos from existing time capsules for home display');
+        final allCapsulePhotos = <File>[];
+        final Map<File, DateTime> photoDateMap = {};
+
+        // Collect photos from all capsules with their creation dates
+        for (final capsule in _storageService.capsules) {
+          for (final photoPath in capsule.photoUrls) {
+            final photoFile = File(photoPath);
+            if (await photoFile.exists()) {
+              allCapsulePhotos.add(photoFile);
+              // Use capsule creation date as a proxy for photo date
+              photoDateMap[photoFile] = capsule.createdAt;
+            }
+          }
+        }
+
+        // Sort photos by date (oldest first)
+        allCapsulePhotos.sort(
+          (a, b) =>
+              photoDateMap[a]?.compareTo(photoDateMap[b] ?? DateTime.now()) ??
+              0,
+        );
+
+        // Use up to 10 photos from capsules
+        if (allCapsulePhotos.isNotEmpty) {
+          _oldPhotos = allCapsulePhotos.take(10).toList();
+          _oldestPhotoDate = photoDateMap[_oldPhotos.first];
+          debugPrint(
+            'Added ${_oldPhotos.length} old photos to home screen, oldest from: ${_oldestPhotoDate?.toString() ?? "unknown date"}',
+          );
+        }
+      }
+
+      // If we still have no photos, prompt the user to select some
+      if (_oldPhotos.isEmpty) {
+        debugPrint('No old photos found, prompting user to select photos');
+        // Show a message to the user
+        EasyLoading.showInfo(
+          'Please select some photos to display on your home screen',
+        );
+
+        // Let the user pick some photos
+        final List<XFile> pickedPhotos = await _picker.pickMultiImage();
+        if (pickedPhotos.isNotEmpty) {
+          // Try to get creation date from image properties (this is simplified)
+          // In a real implementation, we would use exif data to get actual photo dates
+          final now = DateTime.now();
+          final sixMonthsAgo = now.subtract(const Duration(days: 180));
+
+          _oldPhotos =
+              pickedPhotos.take(10).map((xFile) => File(xFile.path)).toList();
+
+          // Set a date for display purposes
+          _oldestPhotoDate = sixMonthsAgo;
+          debugPrint(
+            'Added ${_oldPhotos.length} user-selected photos to home screen',
+          );
+        }
+      }
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading old photos: $e');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Simplified method to get a thumbnail for a photo
+  Future<Uint8List?> getOldPhotoThumbnail(File photo, {int size = 200}) async {
+    try {
+      // Read the file into memory
+      final bytes = await photo.readAsBytes();
+      return bytes;
+    } catch (e) {
+      debugPrint('Error loading thumbnail: $e');
+      return null;
     }
   }
 
@@ -87,6 +208,11 @@ class MediaService extends ChangeNotifier {
 
   Future<List<File>> pickMultipleImages() async {
     try {
+      if (!_isCapsuleCreationMode) {
+        debugPrint('Cannot pick images outside of capsule creation mode');
+        return [];
+      }
+
       final List<XFile> pickedFiles = await _picker.pickMultiImage();
 
       if (pickedFiles.isEmpty) return [];
@@ -108,6 +234,13 @@ class MediaService extends ChangeNotifier {
 
   Future<File?> takePhoto() async {
     try {
+      if (!_isCapsuleCreationMode) {
+        debugPrint('Cannot take photo outside of capsule creation mode');
+        _errorMessage = 'Photos can only be added when creating a capsule';
+        notifyListeners();
+        return null;
+      }
+
       final XFile? pickedFile = await _picker.pickImage(
         source: ImageSource.camera,
       );
