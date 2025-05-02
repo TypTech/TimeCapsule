@@ -63,42 +63,213 @@ class ThemeService extends ChangeNotifier {
   ThemeMode get themeMode => _isDarkMode ? ThemeMode.dark : ThemeMode.light;
 
   ThemeData get lightTheme => ThemeData(
-    primarySwatch: Colors.purple,
+    useMaterial3: true,
     colorScheme: ColorScheme.fromSeed(
-      seedColor: const Color(0xFFE8D5F5),
+      seedColor: const Color(0xFF6A5AE0),
       brightness: Brightness.light,
+      primary: const Color(0xFF6A5AE0),
+      secondary: const Color(0xFF7ABFFF),
+      tertiary: const Color(0xFFFF8B93),
+      surface: const Color(0xFFF9F9FE),
+      background: const Color(0xFFF9F9FE),
     ),
-    scaffoldBackgroundColor: Colors.white,
+    scaffoldBackgroundColor: const Color(0xFFF9F9FE),
     appBarTheme: const AppBarTheme(
-      backgroundColor: Color(0xFFE8D5F5),
-      foregroundColor: Colors.black87,
-      elevation: 2,
-    ),
-    textTheme: GoogleFonts.poppinsTextTheme(),
-    elevatedButtonTheme: ElevatedButtonThemeData(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFFE8D5F5),
-        foregroundColor: Colors.black87,
-        elevation: 3,
+      backgroundColor: Color(0xFFF9F9FE),
+      foregroundColor: Color(0xFF0A0A26),
+      elevation: 0,
+      centerTitle: true,
+      titleTextStyle: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        color: Color(0xFF0A0A26),
       ),
     ),
-    useMaterial3: true,
+    textTheme: GoogleFonts.interTextTheme().copyWith(
+      titleLarge: GoogleFonts.inter(
+        fontWeight: FontWeight.w600,
+        fontSize: 22,
+        color: const Color(0xFF0A0A26),
+      ),
+      titleMedium: GoogleFonts.inter(
+        fontWeight: FontWeight.w600,
+        fontSize: 16,
+        color: const Color(0xFF0A0A26),
+      ),
+      bodyLarge: GoogleFonts.inter(
+        fontSize: 16,
+        color: const Color(0xFF0A0A26),
+      ),
+      bodyMedium: GoogleFonts.inter(
+        fontSize: 14,
+        color: const Color(0xFF0A0A26),
+      ),
+    ),
+    cardTheme: CardTheme(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: Colors.white,
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF6A5AE0),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: const Color(0xFF6A5AE0),
+        side: const BorderSide(color: Color(0xFF6A5AE0), width: 1.5),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: Colors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFF6A5AE0), width: 1.5),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    ),
+    floatingActionButtonTheme: const FloatingActionButtonThemeData(
+      backgroundColor: Color(0xFF6A5AE0),
+      foregroundColor: Colors.white,
+      elevation: 2,
+    ),
+    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      backgroundColor: Colors.white,
+      selectedItemColor: Color(0xFF6A5AE0),
+      unselectedItemColor: Color(0xFFA0A0A0),
+      type: BottomNavigationBarType.fixed,
+      elevation: 0,
+    ),
+    chipTheme: ChipThemeData(
+      backgroundColor: Colors.white,
+      selectedColor: const Color(0xFF6A5AE0).withOpacity(0.1),
+      labelStyle: const TextStyle(color: Color(0xFF0A0A26)),
+      secondaryLabelStyle: const TextStyle(color: Colors.white),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: const Color(0xFF6A5AE0).withOpacity(0.3)),
+      ),
+    ),
   );
 
   ThemeData get darkTheme => ThemeData(
+    useMaterial3: true,
     colorScheme: ColorScheme.fromSeed(
-      seedColor: const Color(0xFF9370DB),
+      seedColor: const Color(0xFF6A5AE0),
       brightness: Brightness.dark,
+      primary: const Color(0xFF6A5AE0),
+      secondary: const Color(0xFF7ABFFF),
+      tertiary: const Color(0xFFFF8B93),
+      surface: const Color(0xFF1E1E2E),
+      background: const Color(0xFF15151F),
     ),
-    textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
-    elevatedButtonTheme: ElevatedButtonThemeData(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF9370DB),
-        foregroundColor: Colors.white,
-        elevation: 3,
+    scaffoldBackgroundColor: const Color(0xFF15151F),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: Color(0xFF15151F),
+      foregroundColor: Colors.white,
+      elevation: 0,
+      centerTitle: true,
+      titleTextStyle: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        color: Colors.white,
       ),
     ),
-    useMaterial3: true,
+    textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme).copyWith(
+      titleLarge: GoogleFonts.inter(
+        fontWeight: FontWeight.w600,
+        fontSize: 22,
+        color: Colors.white,
+      ),
+      titleMedium: GoogleFonts.inter(
+        fontWeight: FontWeight.w600,
+        fontSize: 16,
+        color: Colors.white,
+      ),
+      bodyLarge: GoogleFonts.inter(fontSize: 16, color: Colors.white),
+      bodyMedium: GoogleFonts.inter(fontSize: 14, color: Colors.white),
+    ),
+    cardTheme: CardTheme(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: const Color(0xFF1E1E2E),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF6A5AE0),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: const Color(0xFF6A5AE0),
+        side: const BorderSide(color: Color(0xFF6A5AE0), width: 1.5),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: const Color(0xFF1E1E2E),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFF6A5AE0), width: 1.5),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    ),
+    floatingActionButtonTheme: const FloatingActionButtonThemeData(
+      backgroundColor: Color(0xFF6A5AE0),
+      foregroundColor: Colors.white,
+      elevation: 2,
+    ),
+    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      backgroundColor: Color(0xFF1E1E2E),
+      selectedItemColor: Color(0xFF6A5AE0),
+      unselectedItemColor: Color(0xFFA0A0A0),
+      type: BottomNavigationBarType.fixed,
+      elevation: 0,
+    ),
+    chipTheme: ChipThemeData(
+      backgroundColor: const Color(0xFF1E1E2E),
+      selectedColor: const Color(0xFF6A5AE0).withOpacity(0.3),
+      labelStyle: const TextStyle(color: Colors.white),
+      secondaryLabelStyle: const TextStyle(color: Colors.white),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: const Color(0xFF6A5AE0).withOpacity(0.3)),
+      ),
+    ),
   );
 
   void toggleTheme() {
