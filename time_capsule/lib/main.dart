@@ -25,15 +25,17 @@ import 'screens/for_you_page.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'screens/home_screen.dart';
+import 'screens/permission_screen.dart';
 
 // Main entry point that initializes services before starting the app
 void main() async {
   // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Request storage permissions
-  await Permission.photos.request();
-  await Permission.storage.request();
+  // Nicht mehr sofort nach Berechtigungen fragen
+  // Diese werden im PermissionScreen angefragt
+  // await Permission.photos.request();
+  // await Permission.storage.request();
 
   // Initialize Hive
   await Hive.initFlutter();
@@ -105,7 +107,8 @@ class MyApp extends StatelessWidget {
       theme: themeService.lightTheme,
       darkTheme: themeService.darkTheme,
       themeMode: themeService.themeMode,
-      home: const HomeScreen(),
+      home:
+          const PermissionScreen(), // Statt HomeScreen verwenden wir PermissionScreen
       builder: EasyLoading.init(),
     );
   }

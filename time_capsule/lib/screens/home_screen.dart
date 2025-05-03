@@ -10,6 +10,7 @@ import 'package:time_capsule/screens/capsule_detail_page.dart';
 import 'package:time_capsule/screens/for_you_page.dart';
 import 'dart:io';
 import 'package:intl/intl.dart';
+import 'package:time_capsule/services/video_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -52,7 +53,13 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _initServices() async {
     final mediaService = Provider.of<MediaService>(context, listen: false);
+    final videoService = Provider.of<VideoService>(context, listen: false);
+
+    // Berechtigungen sollten bereits vom PermissionScreen angefragt worden sein
+    // Diese Aufrufe dienen als zusätzliche Absicherung
     await mediaService.requestPermission();
+    await videoService.requestPermission();
+
     await _storageService.init();
     await _refreshData();
 
