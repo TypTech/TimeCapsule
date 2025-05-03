@@ -71,6 +71,7 @@ dependencies:
   # New dependencies
   # flutter_local_notifications: ^9.9.1  # Temporarily removed due to compatibility issues
   flutter_easyloading: ^3.0.5
+  flutter_launcher_icons: ^0.14.3
   # timezone: ^0.8.0  # Temporarily removed due to compatibility issues
 
 dev_dependencies:
@@ -128,3 +129,10 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+  min_sdk_android: 21
+  remove_alpha_ios: true

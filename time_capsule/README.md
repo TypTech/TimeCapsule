@@ -1,76 +1,107 @@
 # TimeCapsule
 
-TimeCapsule is a Flutter application that helps you create, organize, and preserve your memories in beautiful photo collections.
+TimeCapsule is a Flutter app that lets you create digital time capsules with photos and memories. The app also features a "For You" section with a TikTok-like interface for browsing videos from your device.
 
 ## Features
 
-- **Photo Collections**: Add and organize photos into themed collections
-- **Multiple Themes**: Choose from various themes to customize your capsules
-- **Local Storage**: All your memories are stored safely on your device
-- **Preview Gallery**: View your photos in an elegant carousel
-- **User Preferences**: Customize your experience with user settings
-- **Dark Mode Support**: Enjoy TimeCapsule in light or dark mode
+### Memory Capsules
+- Create time capsules with photos from your device
+- Add titles, descriptions, and themes to your capsules
+- View and manage your saved capsules
+
+### Home Screen
+- View old photos from your device and past capsules
+- Navigate to create new capsules or view existing ones
+
+### For You Page
+- Browse through videos from your device with a TikTok-style interface
+- Like/unlike videos to save your favorites
+- Swipe navigation for a smooth browsing experience
+
+## Screenshots
+
+Hier sind einige Screenshots der TimeCapsule App:
+
+### Hauptbildschirm
+![Hauptbildschirm](screenshots/home_screen.png)
+
+### Zeitkapsel-Erstellung
+![Kapsel erstellen](screenshots/create_capsule.png)
+
+### For You Seite
+![For You](screenshots/for_you.png)
+
+*Hinweis: Um deine eigenen Screenshots hinzuzufügen, erstelle einen 'screenshots' Ordner im Hauptverzeichnis des Projekts und füge deine Bilder hinzu. Aktualisiere dann die obigen Bildpfade entsprechend.*
+
+## Technical Details
+
+### Built With
+- Flutter - Cross-platform UI framework
+- Hive - Local database for storing capsules and liked videos
+- Provider - State management
+- Permission Handler - For managing media permissions
+- Video Player - For video playback functionality
+
+### Architecture
+- The app follows a service-based architecture
+- Clear separation between UI and business logic
+- Model-View-Controller pattern for state management
 
 ## Getting Started
 
 ### Prerequisites
-
-- Flutter SDK (latest stable version recommended)
-- Android Studio or Visual Studio Code with Flutter extensions
-- Android emulator or physical device for testing
+- Flutter 3.10.0 or higher
+- Dart 3.0.0 or higher
+- Android Studio / VS Code with Flutter extension
 
 ### Installation
 
-1. Clone this repository:
-```
-git clone https://github.com/yourusername/timecapsule.git
-```
-
-2. Navigate to the project directory:
-```
-cd timecapsule
+1. Clone the repository
+```bash
+git clone https://github.com/yourusername/TimeCapsule.git
 ```
 
-3. Install dependencies:
+2. Navigate to the project directory
+```bash
+cd TimeCapsule
 ```
+
+3. Install dependencies
+```bash
 flutter pub get
 ```
 
-4. Run the app:
-```
+4. Run the app
+```bash
 flutter run
 ```
 
-## Building an APK
+## Building for Release
 
-To build an APK for Android devices, please refer to the detailed instructions in the `BUILD_INSTRUCTIONS.md` file. This document provides solutions for common build issues, particularly related to Java/Kotlin compatibility.
+### Android
+To build a release APK:
+```bash
+flutter build apk --release
+```
 
-## App Structure
+The APK file will be located at `build/app/outputs/flutter-apk/app-release.apk`
 
-- **lib/screens/**: UI screens of the application
-- **lib/services/**: Business logic and data management services
-- **lib/widgets/**: Reusable UI components
-- **lib/main.dart**: Entry point of the application
+### iOS
+To build for iOS:
+```bash
+flutter build ios --release
+```
 
-## Features Implementation
+Then use Xcode to create an archive and distribute the app.
 
-### Photo Selection
-The app uses the `image_picker` package for selecting photos from the device gallery or taking new photos with the camera. Selected photos are processed through the `MediaService` class.
+## Permissions
+The app requires the following permissions:
+- Storage access (to read/write photos and videos)
+- Camera access (to take new photos)
+- Media library access (to browse photos and videos)
 
-### Theme Management
-The app supports multiple themes managed by the `ThemeService`. Users can switch between light and dark modes, as well as different theme styles.
+## License
+*[Add your license information here]*
 
-### Local Storage
-All data is stored locally on the device using a combination of Hive database (for capsule metadata) and file system storage (for photos).
-
-## Known Issues and Limitations
-
-- APK generation may encounter Java/Kotlin compatibility issues due to plugin interdependencies
-- Video processing features are currently unavailable due to dependency conflicts
-
-## Future Improvements
-
-- Add support for video content
-- Implement sharing functionality
-- Add cloud backup options
-- Enhance photo editing capabilities
+## Acknowledgments
+*[Add any acknowledgments here]*
