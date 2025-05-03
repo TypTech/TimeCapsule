@@ -31,6 +31,9 @@ Hier sind einige Screenshots der TimeCapsule App:
 ### For You Seite
 ![For You](screenshots/for_you.png)
 
+### For You Seite
+![Einstellungen](screenshots/settings.png)
+
 *Hinweis: Um deine eigenen Screenshots hinzuzufügen, erstelle einen 'screenshots' Ordner im Hauptverzeichnis des Projekts und füge deine Bilder hinzu. Aktualisiere dann die obigen Bildpfade entsprechend.*
 
 ## Technical Details
@@ -103,5 +106,5 @@ The app requires the following permissions:
 ## License
 *[Add your license information here]*
 
-## Acknowledgments
-*[Add any acknowledgments here]*
+
+### Made with 💕 by TypTech
