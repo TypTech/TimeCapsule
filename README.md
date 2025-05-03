@@ -104,7 +104,7 @@ The app requires the following permissions:
 - Media library access (to browse photos and videos)
 
 ## License
-*[Add your license information here]*
+*[MIT License](LICENSE)*
 
 
 ### Made with 💕 by TypTech
